@@ -26,6 +26,7 @@ def save_result_to_bytes(result: PlanResult) -> bytes:
 
 
 def _write_summary(writer, result):
+    from collections import defaultdict
     summary = [
         {"项目": "派车总数", "数值": len(result.vehicles)},
         {"项目": "总卡板数", "数值": result.total_pallets},
@@ -35,6 +36,21 @@ def _write_summary(writer, result):
         q = sum(v.cost_q for v in result.vehicles if v.vtype_name == tn)
         summary.append({"项目": f"  {tn} 辆数", "数值": cnt})
         summary.append({"项目": f"  {tn} 费用", "数值": q})
+
+    # Booking Sequence 集中度
+    seq_cars = defaultdict(set)
+    for vh in result.vehicles:
+        for ln in vh.lns:
+            if ln.booking_seq:
+                seq_cars[ln.booking_seq].add(id(vh))
+    if seq_cars:
+        scattered = sum(len(cars) - 1 for cars in seq_cars.values())
+        total_groups = len(seq_cars)
+        perfectly_together = sum(1 for cars in seq_cars.values() if len(cars) == 1)
+        summary.append({"项目": f"  Booking Sequence 组数", "数值": total_groups})
+        summary.append({"项目": f"  其中同组同车", "数值": perfectly_together})
+        summary.append({"项目": f"  分散度（越低越好）", "数值": scattered})
+
     pd.DataFrame(summary).to_excel(writer, sheet_name="成本汇总", index=False)
 
 
@@ -46,7 +62,8 @@ def _write_detail(writer, result):
                 "车辆序号": i, "车型": vh.vtype_name, "该车Q": vh.cost_q,
                 "卡板合计": f"{vh.used_pallets}/{vh.max_pallets}",
                 "卡板利用率": f"{vh.pallet_util*100:.0f}%",
-                "LN号": ln.ln_id, "LN卡板": ln.pallets, "LN体积m³": ln.volume,
+                "Loading": ln.ln_id, "Plt QTY": ln.pallets,
+                "Booking Sequence": ln.booking_seq,
             })
     pd.DataFrame(detail or [{"提示": "无派车"}]).to_excel(
         writer, sheet_name="派车明细", index=False)
@@ -55,7 +72,7 @@ def _write_detail(writer, result):
 def _write_warn(writer, result):
     warn = []
     for ln in result.oversized_lns:
-        warn.append({"LN号": ln.ln_id, "卡板": ln.pallets, "异常": f"卡板>{MAX_PAL}"})
+        warn.append({"Loading": ln.ln_id, "卡板": ln.pallets, "异常": f"卡板>{MAX_PAL}"})
     if warn:
         pd.DataFrame(warn).to_excel(writer, sheet_name="异常警告", index=False)
         from openpyxl.styles import PatternFill
