@@ -169,7 +169,7 @@ if lns:
     c2.metric("总卡板数", total_pal)
     c3.metric("理论最低Q（下界）", f"{min_q_theory:,}")
     c4.metric(f"卡板>{MAX_PAL} 异常", len(oversize),
-              delta="⚠ 异常喔" if oversize else "✅ 无")
+              delta="⚠ 需人工处理" if oversize else "✅ 无")
 
     if bk_counter:
         st.markdown(f"**📋 Booking Sequence 分布**：{len(bk_counter)} 组 → "
@@ -272,7 +272,7 @@ if lns:
         )
 
         if result.oversized_lns:
-            st.error(f"⚠ 以下 Loading 卡板>{MAX_PAL}，超过34卡板数了喔："
+            st.error(f"⚠ 以下 Loading 卡板>{MAX_PAL}，无法装下，需人工处理："
                      f"**{', '.join(ln.ln_id for ln in result.oversized_lns)}**")
 
         if st.button("🔄 重新排车（换一批数据）", use_container_width=True):
@@ -284,5 +284,6 @@ if lns:
 # ============================================================
 st.markdown("---")
 st.markdown(
-    
+    "💡 **算法**：穷举所有车型组合（Q 升序） → 贪心+回溯求可行装配 → 同 Q 时取 Booking Sequence 最集中的。"
+    "20~50 条 Loading 秒级出严格全局最优解。"
 )
