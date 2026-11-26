@@ -6,9 +6,10 @@ from typing import List, Tuple
 
 @dataclass
 class LN:
-    ln_id: str
-    pallets: int
+    ln_id: str            # Loading 号（原 LN号，不拆分硬约束）
+    pallets: int          # Plt QTY（卡板数）
     volume: float = 0.0
+    booking_seq: str = "" # Booking Sequence（软约束：尽量同车）
 
 
 @dataclass
